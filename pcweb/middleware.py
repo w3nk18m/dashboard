@@ -15,5 +15,5 @@ class CloseSidebarMiddleware(rx.Middleware):
             event: The event to preprocess.
         """
         if event.name == rx.event.get_hydrate_event(state):
-            state.get_substate(["navbar_state"]).sidebar_open = False
-            state.get_substate(["index_state"]).show_c2a = True
+            state.get_substate(["state","state","navbar_state"]).sidebar_open = False
+            state.get_substate(["state","state","index_state"]).show_c2a = True

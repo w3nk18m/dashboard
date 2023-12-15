@@ -117,7 +117,7 @@ def subject_grading_criteria():
                     row_markers="both",
                     # freeze_columns=5,
                     # row_marker_width=40,
-                    column_select="multiple",        
+                    column_select="multi",
                     on_cell_edited=SubjecGradeState.handle_update,
                     # on_delete=SubjecState.handle_delete,
                 ),
