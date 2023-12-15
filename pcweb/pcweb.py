@@ -11,6 +11,10 @@ from pcweb.pages import routes, input_routes, output_routes
 
 from pcweb.pages import page404
 
+from pcweb.backend.mongodb import init
+
+
+init()
 # Create the app.
 app = rx.App(
     style=styles.BASE_STYLE,
