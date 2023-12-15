@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 from unicodedata import normalize
 
+from bunnet import WriteRules, DeleteRules
+
+
 def parsing_data(filename:str):
     df = pd.read_excel(filename,'성취기준')
     values = df.values
@@ -23,10 +26,10 @@ def parsing_data(filename:str):
             if pd.isna(val[0]) and pd.isna(val[1]):
                 continue
             elif pd.isna(val[0]):
-                part_dict[-1]["성취기준"].append(normalize("NFKD",val[1]))
+                part_dict[-1]["성취기준"].append({"성취기준":normalize("NFKD",val[1])})
             else:
                 partname = val[0]
-                part_dict.append({"단원명":partname, "성취기준":[normalize("NFKD",val[1])]})
+                part_dict.append({"단원명":partname, "성취기준":[{"성취기준":normalize("NFKD",val[1])}]})
 
         temp.append(lecture_dict)
     return temp
@@ -42,12 +45,17 @@ if __name__ == "__main__":
     data = parsing_data('./피드백지 구상_231208.xlsx')
 
     # mongo db에 있는 지 확인
-    from pcweb.backend.SubjectModel import SubjectModel
+    from pcweb.backend.SubjectModel import Subject
+    #기존 것 삭제
+    for d in Subject.find():
+        d.delete(link_rule=DeleteRules.DELETE_LINKS)
+
     for d in data:
-        if SubjectModel.find(SubjectModel.label == d['교과']).count() == 0:
-            sm = SubjectModel.parse_obj(d)
-            sm.create()
+        if Subject.find(Subject.label == d['교과']).count() == 0:
+            sm = Subject.parse_obj(d)
+            sm.save(link_rule=WriteRules.WRITE)
+
     #표현
     from rich import print
-    for sm in SubjectModel.find(SubjectModel.label == "수학").to_list():
-        print(sm)
+    for sm in Subject.find(Subject.label == "수학", fetch_links=True):
+        print(sm.dict(by_alias=True))

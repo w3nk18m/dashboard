@@ -9,6 +9,11 @@ from pcweb.styles import text_colors as tc
 from pcweb.templates.webpage import webpage
 # from pcweb.flexdown import component_map
 
+
+from pcweb.backend.SubjectModel import Subject, AchievementSTDS, Unit
+from bunnet import PydanticObjectId
+from fastapi.encoders import jsonable_encoder
+
 from typing import List
 
 단원: List[str] = [
@@ -49,6 +54,23 @@ class SubjecState(State):
     table_col: list = []
     table_data: list = []
     table_null: list = []
+
+
+    years: List[str] = []
+    grades: List[str] = []
+    semesters: List[str] = []
+    subjects: List[str] = []
+
+    units: List[str] = []
+    achievements: List[str] = []
+
+    selected_year: str = ""
+    selected_grade: str = ""
+    selected_semester: str = ""
+    selected_subject: str = ""
+    selected_subject_json: str = ""
+    selected_unit: str = ""
+
 
     # form_data: dict = {}
     # table_temp: dict = {}
@@ -117,6 +139,46 @@ class SubjecState(State):
         """Handle the form sort."""
         self.table_data.sort(key = lambda x:x[1])
 
+    def on_load(self):
+        s = Subject.find().run()
+        self.years = list({d.year for d in s})
+        self.grades = list({d.grade for d in s})
+        self.semesters = list({d.semester for d in s})
+        self.subjects = list({d.label for d in s})
+
+    def on_changed_subject(self, val):
+        self.selected_subject = val
+
+        if self.selected_year != "" and \
+            self.selected_grade != "" and \
+            self.selected_semester != "" and \
+            self.selected_subject != "":
+
+            subjects = Subject.find(Subject.year == self.selected_year,
+                             Subject.grade == self.selected_grade,
+                             Subject.semester == self.selected_semester,
+                             Subject.label == self.selected_subject, fetch_links=True).to_list()
+            self.selected_subject_json = jsonable_encoder(subjects)
+            self.units = [i["단원명"] for i in self.selected_subject_json[0]["단원"]]
+        else:
+            self.units = []
+            self.selected_unit = ""
+            self.achievements = []
+
+
+    def on_changed_unit(self, val):
+        self.selected_unit = val
+        if val != "" and self.selected_subject_json != "":
+
+            self.achievements = [j["성취기준"] for i in self.selected_subject_json[0]["단원"] if i["단원명"] == val for j in i["성취기준"]]
+        else:
+            self.achievements = []
+
+
+
+
+
+
 @webpage(path="/input/subject_concept")
 def subject_concept():
     return rx.container(
@@ -129,46 +191,65 @@ def subject_concept():
                 width="100%",
             ),
             rx.form(
-                rx.vstack(                    
+                rx.vstack(
                     rx.select(
-                        학년도,
+                        SubjecState.years,
                         placeholder="학년도",
                         id="학년도",
                         color_schemes="twitter",
+                        on_change=SubjecState.set_selected_year,
+                        default_value="",
+                        is_required= True,
                     ),
                     rx.select(
-                        학기,
+                        SubjecState.semesters,
                         placeholder="학기",
                         id="학기",
                         color_schemes="twitter",
+                        on_change=SubjecState.set_selected_semester,
+                        default_value="",
+                        is_required= True,
                     ),
                     rx.select(
-                        학년,
+                        SubjecState.grades,
                         placeholder="학년",
                         id="학년",
                         color_schemes="twitter",
+                        on_change=SubjecState.set_selected_grade,
+                        default_value="",
+                        is_required= True,
                     ),
                     rx.select(
-                        교과,
+                        SubjecState.subjects,
                         placeholder="교과",
                         id="교과",
                         color_schemes="twitter",
+                        on_change=SubjecState.on_changed_subject,
+                        default_value="",
+                        is_required= True,
                     ),
                     rx.select(
-                        단원,
+                        SubjecState.units,
                         placeholder="단원 선택",
                         id="단원",
                         color_schemes="twitter",
+                        on_change=SubjecState.on_changed_unit,
+                        default_value="",
+                        is_required= True,
                     ),
                     rx.select(
-                        성취기준,
+                        SubjecState.achievements,
                         placeholder="성취기준 선택",
                         id="성취기준",
                         color_schemes="twitter",
+                        default_value="",
+                        is_required= True,
                     ),
                     rx.button("등록", type_="submit"),
                 ),
                 on_submit=SubjecState.handle_register,
+                on_mount=SubjecState.on_load,
+                reset_on_submit=True,
             ),
             rx.box(
                 rx.divider(),
