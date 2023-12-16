@@ -1,0 +1,1 @@
+export default {"styles": {"global": {"::selection": {"backgroundColor": "#AD9BF8"}, "body": {}}}}
